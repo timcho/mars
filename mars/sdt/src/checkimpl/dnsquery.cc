@@ -26,10 +26,10 @@
 #include <fstream>
 #endif
 
-#include "mars/comm/xlogger/xlogger.h"
-#include "mars/comm/socket/socket_address.h"
+//#include "mars/comm/xlogger/xlogger.h"
+//#include "mars/comm/socket/socket_address.h"
 
-#include "sdt/src/tools/netchecker_trafficmonitor.h"
+//#include "sdt/src/tools/netchecker_trafficmonitor.h"
 
 #define TRAFFIC_LIMIT_RET_CODE (INT_MIN)
 #define DNS_PORT (53)
@@ -122,8 +122,8 @@ static bool           isValidIpAddress(const char* _ipaddress);
  *返回值:          当返回-1表示查询失败，当返回0则表示查询成功
  *
  */
-int socket_gethostbyname(const char* _host, socket_ipinfo_t* _ipinfo, int _timeout /*ms*/, const char* _dnsserver, NetCheckTrafficMonitor* _traffic_monitor) {
-    xinfo2(TSF"in socket_gethostbyname,_host=%0", _host);
+int socket_gethostbyname(const char* _host, socket_ipinfo_t* _ipinfo, int _timeout /*ms*/, const char* _dnsserver/*, NetCheckTrafficMonitor* _traffic_monitor*/) {
+//    xinfo2(TSF"in socket_gethostbyname,_host=%0", _host);
 
     if (NULL == _host) return -1;
 
@@ -134,31 +134,32 @@ int socket_gethostbyname(const char* _host, socket_ipinfo_t* _ipinfo, int _timeo
     std::vector<std::string> dns_servers;
 
     if (_dnsserver && isValidIpAddress(_dnsserver)) {
-        xinfo2(TSF"DNS server: %0", _dnsserver);
+//        xinfo2(TSF"DNS server: %0", _dnsserver);
         dns_servers.push_back(_dnsserver);
     } else {
-        xinfo2(TSF"use default DNS server.");
+//        xinfo2(TSF"use default DNS server.");
         GetHostDnsServerIP(dns_servers);
     }
 
     SOCKET sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);  // UDP packet for DNS queries
 
     if (sock < 0) {
-        xerror2(TSF"in socket_gethostbyname get socket error");
+//        xerror2(TSF"in socket_gethostbyname get socket error");
         return -1;
     }
 
     struct sockaddr_in dest = {0};
 
     if (dns_servers.empty()) {
-        xerror2(TSF"No dns servers error.");
+//        xerror2(TSF"No dns servers error.");
         ::socket_close(sock);
         return -1;
     }
 
     std::vector<std::string>::iterator iter = dns_servers.begin();
     // 配置DNS服务器的IP和端口号
-    dest = *(struct sockaddr_in*)(&socket_address((*iter).c_str(), DNS_PORT).address());
+    //TODO ip&port convert to aockaddr_
+//    dest = *(struct sockaddr_in*)(&socket_address((*iter).c_str(), DNS_PORT).address());
 
     struct RES_RECORD answers[SOCKET_MAX_IP_COUNT];  // the replies from the DNS server
     memset(answers, 0, sizeof(RES_RECORD)*SOCKET_MAX_IP_COUNT);
@@ -174,15 +175,15 @@ int socket_gethostbyname(const char* _host, socket_ipinfo_t* _ipinfo, int _timeo
         PrepareDnsQueryPacket(send_buf, dns, qname, _host);
         unsigned long send_packlen = sizeof(struct DNS_HEADER) + (strlen((const char*)qname) + 1) + sizeof(struct QUESTION);
 
-        if (NULL != _traffic_monitor) {
-            if (_traffic_monitor->sendLimitCheck(send_packlen)) {
-                ret = TRAFFIC_LIMIT_RET_CODE;
-                break;
-            }
-        }
+//        if (NULL != _traffic_monitor) {
+//            if (_traffic_monitor->sendLimitCheck(send_packlen)) {
+//                ret = TRAFFIC_LIMIT_RET_CODE;
+//                break;
+//            }
+//        }
 
         if (sendto(sock, (char*)send_buf, send_packlen, 0, (struct sockaddr*)&dest, sizeof(dest)) == -1) {
-            xerror2(TSF"send dns query error.");
+//            xerror2(TSF"send dns query error.");
             break;
         }
 
@@ -193,16 +194,16 @@ int socket_gethostbyname(const char* _host, socket_ipinfo_t* _ipinfo, int _timeo
         int recvPacketLen = 0;
 
         if ((recvPacketLen = RecvWithinTime(sock, (char*)recv_buf, BUF_LEN, (struct sockaddr*)&recv_src, &recv_src_len, _timeout / 1000, (_timeout % 1000) * 1000)) == -1) {
-            xerror2(TSF"receive dns query error.");
+//            xerror2(TSF"receive dns query error.");
             break;
         }
 
-        if (NULL != _traffic_monitor) {
-            if (_traffic_monitor->recvLimitCheck(recvPacketLen)) {
-                ret = TRAFFIC_LIMIT_RET_CODE;
-                break;
-            }
-        }
+//        if (NULL != _traffic_monitor) {
+//            if (_traffic_monitor->recvLimitCheck(recvPacketLen)) {
+//                ret = TRAFFIC_LIMIT_RET_CODE;
+//                break;
+//            }
+//        }
 
         // move ahead of the dns header and the query field
         unsigned char* reader = &recv_buf[sizeof(struct DNS_HEADER) + (strlen((const char*)qname) + 1) + sizeof(struct QUESTION)];
@@ -222,7 +223,7 @@ int socket_gethostbyname(const char* _host, socket_ipinfo_t* _ipinfo, int _timeo
         }
 
         if (0 >= _ipinfo->size) {  // unkown host, dns->rcode == 3
-            xerror2(TSF"unknown host.");
+//            xerror2(TSF"unknown host.");
             break;
         }
 
@@ -231,14 +232,14 @@ int socket_gethostbyname(const char* _host, socket_ipinfo_t* _ipinfo, int _timeo
     } while (false);
 
     FreeAll(answers);
-    xinfo2(TSF"close fd in dnsquery,sock=%0", sock);
+//    xinfo2(TSF"close fd in dnsquery,sock=%0", sock);
     ::socket_close(sock);
     return ret;  //* 查询DNS服务器超时
 }
 
-int socket_gethostbyname(const char* _host, socket_ipinfo_t* _ipinfo, int _timeout /*ms*/, const char* _dnsserver) {
-    return socket_gethostbyname(_host, _ipinfo, _timeout, _dnsserver, NULL);
-}
+//int socket_gethostbyname(const char* _host, socket_ipinfo_t* _ipinfo, int _timeout /*ms*/, const char* _dnsserver) {
+//    return socket_gethostbyname(_host, _ipinfo, _timeout, _dnsserver, NULL);
+//}
 bool isValidIpAddress(const char* _ipaddress) {
     struct sockaddr_in sa;
 
@@ -274,7 +275,7 @@ void ReadRecvAnswer(unsigned char* _buf, struct DNS_HEADER* _dns, unsigned char*
             _answers[i].rdata = (unsigned char*)malloc(ntohs(_answers[i].resource->data_len));
 
             if (NULL == _answers[i].rdata) {
-                xerror2(TSF"answer error.");
+//                xerror2(TSF"answer error.");
                 return;
             }
 
@@ -301,7 +302,7 @@ unsigned char* ReadName(unsigned char* _reader, unsigned char* _buffer, int* _co
     name   = (unsigned char*)malloc(INIT_SIZE);
 
     if (NULL == name) {
-        xerror2(TSF"malloc error.");
+//        xerror2(TSF"malloc error.");
         return NULL;
     }
 
@@ -327,7 +328,7 @@ unsigned char* ReadName(unsigned char* _reader, unsigned char* _buffer, int* _co
             more_name = (unsigned char*)realloc(name, (INIT_SIZE + INCREMENT * timesForRealloc));
 
             if (NULL == more_name) {
-                xerror2(TSF"realloc error.");
+//                xerror2(TSF"realloc error.");
                 free(name);
                 return NULL;
             }
@@ -434,7 +435,7 @@ label:
 
     if (FD_ISSET(_fd, &exceptfds)) {
         // socket异常处理
-        xerror2(TSF"socket exception.");
+//        xerror2(TSF"socket exception.");
         return -1;
     }
 
@@ -457,8 +458,8 @@ void GetHostDnsServerIP(std::vector<std::string>& _dns_servers) {
     __system_property_get("net.dns2", buf2);
     _dns_servers.push_back(std::string(buf1));  // 主DNS
     _dns_servers.push_back(std::string(buf2));  // 备DNS
-    xinfo2(TSF"main dns: %0", std::string(buf1).c_str());
-    xinfo2(TSF"sub dns: %0", std::string(buf2).c_str());
+//    xinfo2(TSF"main dns: %0", std::string(buf1).c_str());
+//    xinfo2(TSF"sub dns: %0", std::string(buf2).c_str());
 }
 
 #elif defined __APPLE__ 
@@ -498,7 +499,8 @@ void GetHostDnsServerIP(std::vector<std::string>& _dns_servers) {
 
             for (int i = 0; i < stat.nscount; i++) {
                 nsaddr = stat.nsaddr_list[i];
-                const char* nsIP = socket_address(nsaddr).ip();
+                //TODO socketaddr convert to ip
+//                const char* nsIP = socket_address(nsaddr).ip();
 
                 if (NULL != nsIP)
                 	_dns_servers.push_back(std::string(nsIP));
@@ -529,7 +531,7 @@ void GetHostDnsServerIP(std::vector<std::string>& _dns_servers) {
     ULONG ulOutBufLen = sizeof(fi);
 
     if (::GetNetworkParams(&fi, &ulOutBufLen) != ERROR_SUCCESS) {
-        xinfo2(TSF" GetNetworkParams() failed");
+//        xinfo2(TSF" GetNetworkParams() failed");
         return;
     }
 

@@ -33,7 +33,7 @@
 #include "mars/comm/socket/socketselect.h"
 #endif
 
-class NetCheckTrafficMonitor;
+//class NetCheckTrafficMonitor;
 
 #define DISALLOW_COPY_AND_ASSIGN(cls)    \
     private:\
@@ -54,7 +54,7 @@ struct PingStatus {
 
 class PingQuery {
   public:
-    PingQuery(NetCheckTrafficMonitor* trafficMonitor = NULL): pingresult_("")
+    PingQuery(/*NetCheckTrafficMonitor* trafficMonitor = NULL*/): pingresult_("")
 #ifdef __APPLE__
         , nsent_(0),
         sockfd_(-1),
@@ -66,7 +66,7 @@ class PingQuery {
         alarm_(boost::bind(&PingQuery::__onAlarm, this), false),
         readwrite_breaker_()
 #endif
-        , traffic_monitor_(trafficMonitor)
+//        , traffic_monitor_(trafficMonitor)
     {}
 
     ~PingQuery() {
@@ -120,7 +120,7 @@ class PingQuery {
     Alarm                   alarm_;
     SocketBreaker     readwrite_breaker_;
 #endif
-    NetCheckTrafficMonitor* traffic_monitor_;
+//    NetCheckTrafficMonitor* traffic_monitor_;
 };
 
 }}
